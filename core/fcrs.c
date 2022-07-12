@@ -27,12 +27,21 @@
 #define ccrs_amg_stats   PREFIXED_NAME(crs_amg_stats)
 #define ccrs_amg_free    PREFIXED_NAME(crs_amg_free )
 
+#undef crs_schur_setup
+#undef crs_schur_solve
+#undef crs_schur_stats
+#undef crs_schur_free
+#define ccrs_schur_setup   PREFIXED_NAME(crs_schur_setup)
+#define ccrs_schur_solve   PREFIXED_NAME(crs_schur_solve)
+#define ccrs_schur_stats   PREFIXED_NAME(crs_schur_stats)
+#define ccrs_schur_free    PREFIXED_NAME(crs_schur_free )
+
 #define fcrs_setup   FORTRAN_NAME(crs_setup,CRS_SETUP)
 #define fcrs_solve   FORTRAN_NAME(crs_solve,CRS_SOLVE)
 #define fcrs_stats   FORTRAN_NAME(crs_stats,CRS_STATS)
 #define fcrs_free    FORTRAN_NAME(crs_free ,CRS_FREE)
 
-static struct crs_data **handle_array = 0;
+static struct coarse **handle_array = 0;
 static int handle_max = 0;
 static int handle_n = 0;
 static int *sid_array; 
@@ -51,7 +60,7 @@ void fcrs_setup(sint *handle, const sint *sid, const MPI_Fint *comm, const sint 
   struct comm c;
   if(handle_n==handle_max)
     handle_max+=handle_max/2+1,
-    handle_array=trealloc(struct crs_data*,handle_array,handle_max),
+    handle_array=trealloc(struct coarse*,handle_array,handle_max),
     sid_array=trealloc(int,sid_array,handle_max);
   comm_init_check(&c, *comm, *np);
 
@@ -68,6 +77,9 @@ void fcrs_setup(sint *handle, const sint *sid, const MPI_Fint *comm, const sint 
     case 2: handle_array[handle_n]=ccrs_hypre_setup(*n,(const ulong*)id,
                                                   *nz,(const uint*)Ai,(const uint*)Aj,A,
                                                   *null_space,&c,param); break;
+    case 3: handle_array[handle_n]=ccrs_schur_setup(*n,(const ulong*)id,
+                                                  *nz,(const uint*)Ai,(const uint*)Aj,A,
+                                                  *null_space,0,&c); break;
   }
 
   comm_free(&c);
@@ -81,6 +93,7 @@ void fcrs_solve(const sint *handle, double x[], double b[])
     case 0: ccrs_xxt_solve(x,handle_array[*handle],b); break;
     case 1: ccrs_amg_solve(x,handle_array[*handle],b); break;
     case 2: ccrs_hypre_solve(x,handle_array[*handle],b); break;
+    case 3: ccrs_schur_solve(x,handle_array[*handle],b,-1); break;
   }
 }
 
@@ -91,6 +104,7 @@ void fcrs_free(sint *handle)
     case 0: ccrs_xxt_free(handle_array[*handle]); break;
     case 1: ccrs_amg_free(handle_array[*handle]); break;
     case 2: ccrs_hypre_free(handle_array[*handle]); break;
+    case 3: ccrs_schur_free(handle_array[*handle]); break;
   }
   handle_array[*handle] = 0;
 }
