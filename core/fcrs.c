@@ -27,14 +27,14 @@
 #define ccrs_amg_stats   PREFIXED_NAME(crs_amg_stats)
 #define ccrs_amg_free    PREFIXED_NAME(crs_amg_free )
 
-#undef crs_schur_setup
-#undef crs_schur_solve
-#undef crs_schur_stats
-#undef crs_schur_free
-#define ccrs_schur_setup   PREFIXED_NAME(crs_schur_setup)
-#define ccrs_schur_solve   PREFIXED_NAME(crs_schur_solve)
-#define ccrs_schur_stats   PREFIXED_NAME(crs_schur_stats)
-#define ccrs_schur_free    PREFIXED_NAME(crs_schur_free )
+#undef crs_parrsb_setup
+#undef crs_parrsb_solve
+#undef crs_parrsb_stats
+#undef crs_parrsb_free
+#define ccrs_parrsb_setup   PREFIXED_NAME(crs_parrsb_setup)
+#define ccrs_parrsb_solve   PREFIXED_NAME(crs_parrsb_solve)
+#define ccrs_parrsb_stats   PREFIXED_NAME(crs_parrsb_stats)
+#define ccrs_parrsb_free    PREFIXED_NAME(crs_parrsb_free )
 
 #define fcrs_setup   FORTRAN_NAME(crs_setup,CRS_SETUP)
 #define fcrs_solve   FORTRAN_NAME(crs_solve,CRS_SOLVE)
@@ -77,7 +77,7 @@ void fcrs_setup(sint *handle, const sint *sid, const MPI_Fint *comm, const sint 
     case 2: handle_array[handle_n]=ccrs_hypre_setup(*n,(const ulong*)id,
                                                   *nz,(const uint*)Ai,(const uint*)Aj,A,
                                                   *null_space,&c,param); break;
-    case 3: handle_array[handle_n]=ccrs_schur_setup(*n,(const ulong*)id,
+    case 4: handle_array[handle_n]=ccrs_parrsb_setup(*n,(const ulong*)id,
                                                   *nz,(const uint*)Ai,(const uint*)Aj,A,
                                                   *null_space,0,&c); break;
   }
@@ -93,7 +93,7 @@ void fcrs_solve(const sint *handle, double x[], double b[])
     case 0: ccrs_xxt_solve(x,handle_array[*handle],b); break;
     case 1: ccrs_amg_solve(x,handle_array[*handle],b); break;
     case 2: ccrs_hypre_solve(x,handle_array[*handle],b); break;
-    case 3: ccrs_schur_solve(x,handle_array[*handle],b,-1); break;
+    case 4: ccrs_parrsb_solve(x,handle_array[*handle],b,-1); break;
   }
 }
 
@@ -104,7 +104,7 @@ void fcrs_free(sint *handle)
     case 0: ccrs_xxt_free(handle_array[*handle]); break;
     case 1: ccrs_amg_free(handle_array[*handle]); break;
     case 2: ccrs_hypre_free(handle_array[*handle]); break;
-    case 3: ccrs_schur_free(handle_array[*handle]); break;
+    case 4: ccrs_parrsb_free(handle_array[*handle]); break;
   }
   handle_array[*handle] = 0;
 }

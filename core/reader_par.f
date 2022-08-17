@@ -466,6 +466,8 @@ c set parameters
             param(40) = 1
          else if (index(c_out,'FEM_AMG_HYPRE') .eq. 1) then
             param(40) = 3
+         else if (index(c_out,'SCHUR') .eq. 1) then
+            param(40) = 4
          else
            write(6,*) 'value: ',trim(c_out)
            write(6,*) 'is invalid for pressure:preconditioner!'
