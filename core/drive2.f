@@ -1798,6 +1798,8 @@ C-----------------------------------------------------------------------
      $                      xm1,ym1,zm1,
      $                      pmask,binvm1,null_space,
      $                      gsh_fld(1),fem_amg_param)
+      else if (isolver.eq.4) then ! Schur
+         call set_overlap
       endif
 
       return 
