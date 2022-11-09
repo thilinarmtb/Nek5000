@@ -191,7 +191,8 @@ c-----------------------------------------------------------------------
           tol = tol / 10.0;
           call find_con(wk,nwk,tol,1,ierr)
         endif
-        call err_chk(ierr,' find_con failed!$')
+        call err_chk(ierr,'Connectivity calculation failed! '//
+     &    'Try tightening mesh::connectivityTol$')
       endif
 
 c fluid elements
