@@ -14,9 +14,10 @@ c
       parameter(lxc=2)
       parameter(lcr=lxc**ldim)
 
-      integer*8 se_to_gcrs(lcr,lelt)
+      integer*8 se_to_gcrs(lcr,lelt), se_to_gcrs_reordered(lcr, lelt)
       integer n_crs,m_crs,nx_crs,nxyz_c
-      common /h1_crsi/ se_to_gcrs, n_crs,m_crs, nx_crs, nxyz_c
+      common /h1_crsi/ se_to_gcrs, n_crs,m_crs, nx_crs, nxyz_c,
+     $                 se_to_gcrs_reordered
 c
       real             h1_basis(lx1*lxc), h1_basist(lxc*lx1)
       common /h1_crs/  h1_basis         , h1_basist

@@ -76,14 +76,11 @@ void fcrs_setup(sint *handle, const sint *sid, const MPI_Fint *comm, const sint 
     case 2: handle_array[handle_n]=ccrs_hypre_setup(*n,(const ulong*)id,
                                                   *nz,(const uint*)Ai,(const uint*)Aj,A,
                                                   *null_space,&c,param); break;
+#if defined(PARRSB)
     case 4: handle_array[handle_n]=ccrs_parrsb_setup(*n,(const ulong*)id,
                                                   *nz,(const uint*)Ai,(const uint*)Aj,A,
                                                   *null_space,0,&c); break;
-  }
-
-  if (c.id == 0) {
-    printf("Coarse setup finished. Algorithm = %d\n", *sid);
-    fflush(stdout);
+#endif
   }
 
   comm_free(&c);
@@ -97,7 +94,9 @@ void fcrs_solve(const sint *handle, double x[], double b[])
     case 0: ccrs_xxt_solve(x,handle_array[*handle],b); break;
     case 1: ccrs_amg_solve(x,handle_array[*handle],b); break;
     case 2: ccrs_hypre_solve(x,handle_array[*handle],b); break;
-    case 4: ccrs_parrsb_solve(x,handle_array[*handle],b,1e-7); break;
+#if defined(PARRSB)
+    case 4: ccrs_parrsb_solve(x,handle_array[*handle],b,1e-5); break;
+#endif
   }
 }
 
@@ -108,7 +107,9 @@ void fcrs_free(sint *handle)
     case 0: ccrs_xxt_free(handle_array[*handle]); break;
     case 1: ccrs_amg_free(handle_array[*handle]); break;
     case 2: ccrs_hypre_free(handle_array[*handle]); break;
+#if defined(PARRSB)
     case 4: ccrs_parrsb_free(handle_array[*handle]); break;
+#endif
   }
   handle_array[*handle] = 0;
 }

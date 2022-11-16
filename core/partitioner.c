@@ -159,7 +159,7 @@ err:
 }
 #endif
 
-void printPartStat(long long *vtx, int nel, int nv, comm_ext ce)
+void print_part_stat(long long *vtx, int nel, int nv, comm_ext ce)
 {
   int i,j;
 
@@ -253,37 +253,34 @@ void printPartStat(long long *vtx, int nel, int nv, comm_ext ce)
   comm_free(&comm);
 }
 
-int redistributeData(int *nel_, long long *vl, long long *el, int *part,
-                     int *seq, int nv, int lelt, struct comm *comm) {
-  int nel=*nel_;
+static int redistribute_mesh(int *nel_, long long *vl, long long *el, int *part,
+                             int *seq, int nv, int lelt, struct comm *comm) {
+  int nel = *nel_;
+  int count, e, n, ibuf;
 
-  struct crystal cr;
-  struct array eList;
-  edata *data;
+  struct array elist;
+  array_init(edata, &elist, nel), elist.n = nel;
 
-  int count,e,n,ibuf;
-
-  /* redistribute data */
-  array_init(edata, &eList, nel), eList.n = nel;
-  for(data = eList.ptr, e = 0; e < nel; ++e) {
-    data[e].proc= part[e];
+  edata *data = (edata *)elist.ptr;
+  for (e = 0; e < nel; ++e) {
+    data[e].proc = part[e];
     data[e].eid = el[e];
-    for(n = 0; n < nv; ++n) {
+    for (n = 0; n < nv; ++n) {
       data[e].vtx[n] = vl[e*nv + n];
     }
   }
 
-  if(seq!=NULL){
-    for(data=eList.ptr, e=0; e<nel; ++e)
-      data[e].seq=seq[e];
+  if (seq != NULL ) {
+    for (data = elist.ptr, e = 0; e < nel; ++e)
+      data[e].seq = seq[e];
   }
 
-  crystal_init(&cr,comm);
-  sarray_transfer(edata, &eList, proc, 0, &cr);
+  struct crystal cr;
+  crystal_init(&cr, comm);
+  sarray_transfer(edata, &elist, proc, 0, &cr);
   crystal_free(&cr);
 
-  *nel_=nel=eList.n;
-
+  *nel_ = nel = elist.n;
   count = 0;
   if (nel > lelt) count = 1;
   comm_allreduce(comm, gs_int, gs_add, &count, 1, &ibuf);
@@ -291,47 +288,37 @@ int redistributeData(int *nel_, long long *vl, long long *el, int *part,
     count = nel;
     comm_allreduce(comm, gs_int, gs_max, &count, 1, &ibuf);
     if (comm->id == 0)
-      printf("ERROR: resulting parition requires lelt=%d!\n", count);
+      printf("ERROR: resulting parition requires lelt = %d!\n", count);
     return 1;
   }
 
-  //TODO: sort by seq
-  if(seq!=NULL){
-    buffer bfr; buffer_init(&bfr,1024);
-    sarray_sort(edata,eList.ptr,eList.n,seq,0,&bfr);
+  if (seq != NULL) {
+    buffer bfr;
+    buffer_init(&bfr,1024);
+    sarray_sort(edata, elist.ptr, elist.n, seq, 0, &bfr);
     buffer_free(&bfr);
   }
 
-  for(data = eList.ptr, e = 0; e < nel; ++e) {
+  for (data = (edata *)elist.ptr, e = 0; e < nel; ++e) {
     el[e] = data[e].eid;
-    for(n = 0; n < nv; ++n) {
+    for (n = 0; n < nv; ++n) {
       vl[e*nv + n] = data[e].vtx[n];
     }
   }
 
-  array_free(&eList);
+  array_free(&elist);
 
   return 0;
 }
 
-#define fpartMesh FORTRAN_UNPREFIXED(fpartmesh,FPARTMESH)
-void fpartMesh(long long *el, long long *vl, double *xyz, const int *lelt,
+#define fpartmesh FORTRAN_UNPREFIXED(fpartmesh,FPARTMESH)
+void fpartmesh(long long *el, long long *vl, double *xyz, const int *lelt,
                int *nell, const int *nve, int *fcomm, int *fpartitioner,
-               int *falgo, int *loglevel, int *rtval)
-{
+               int *falgo, int *loglevel, int *rtval) {
+  int nel = *nell, nv = *nve;
+  int partitioner = *fpartitioner, algo = *falgo;
+
   struct comm comm;
-
-  int nel, nv, partitioner, algo;
-  int e, n;
-  int count, ierr, ibuf;
-  int *part,*seq;
-  int opt[3];
-
-  nel  = *nell;
-  nv   = *nve;
-  partitioner = *fpartitioner;
-  algo = *falgo; // 0 - Lanczos, 1 - MG (Used only when partitioner = 1)
-
 #if defined(MPI)
   comm_ext cext = MPI_Comm_f2c(*fcomm);
 #else
@@ -339,52 +326,60 @@ void fpartMesh(long long *el, long long *vl, double *xyz, const int *lelt,
 #endif
   comm_init(&comm, cext);
 
-  part = (int *)malloc(*lelt * sizeof(int));
-  seq  = (int *)malloc(*lelt * sizeof(int));
+  int *part = (int *)malloc(*lelt * sizeof(int));
+  int *seq  = (int *)malloc(*lelt * sizeof(int));
 
-  ierr = 1;
+  int ierr = 1;
 #if defined(PARRSB)
   // General options
-  //   partitioner: Partition algo: 0 - RSB, 1 - RCB, 2 - RIB (Default: 0)
-  //   verbose_level: Verbose level: 0, 1, 2, .. etc (Default: 1)
-  //   profile_level: Profile level: 0, 1, 2, .. etc (Default: 1)
-  //   two_level: Use two level partitioning algo (Default: 0)
-  //   repair: Repair disconnected components: 0 - No, 1 - Yes (Default: 0)
-  // RSB specific
-  //   rsb_algo: RSB algo: 0 - Lanczos, 1 - RQI (Default: 0)
-  //   rsb_pre: RSB pre-partition algo: 0 - None, 1 - RCB , 2 - RIB (Default: 1)
-  //   rsb_max_iter: Maximum iterations in Lanczos or RQI (Default: 50)
-  //   rsb_tol: Tolerance for Lanczos or RQI (Default: 1e-3)
-  // RSB-MG specific
-  //   rsb_mg_grammian: MG Grammian: 0 or 1 (Default: 0)
-  //   rsb_mg_factor: MG Coarsening factor (Default: 2, should be > 1)
-  // RSB-Lanczos specific
-  //   rsb_lanczos_max_restarts: Maximum restarts in Lanczos (Default: 50)
-  parrsb_options options = parrsb_default_options;
-  options.verbose_level = *loglevel;
-  if (partitioner & 1)
-    options.partitioner = 0;
-  else if (partitioner & 2)
-    options.partitioner = 1;
+    // partitioner: 0 - RSB, 1 - RCB, 2 - RIB (Default: 0)
+    // verbose_level: 0, 1, 2, .. etc (Default: 1)
+    // profile_level: 0, 1, 2, .. etc (Default: 1)
+    // two_level: 0 or 1 (Default: 0)
+    // repair: 0 - No, 1 - Yes (Default: 0)
+    // local: 0: No, 1: RSB, 2: RCB, 3: RIB (Default: 0)
+  // RSB common (Lanczos + MG) options
+    // rsb_algo: 0: Lanczos, 1: MG (Default: 0)
+    // rsb_pre: 0: None, 1: RCB , 2: RIB, 3: sort by globalId (Default: 1)
+    // rsb_max_iter (Default: 50)
+    // rsb_max_passes (Default: 50)
+    // rsb_tol: (Default: 1e-5)
+  // RSB MG specific options
+    // rsb_mg_grammian: 0 or 1 (Default: 0)
+    // rsb_mg_factor (Default: 2, should be > 1)
+    // rsb_mg_sagg: 0 or 1 (Default: 0)
 
-  if (partitioner & 1)
-    options.rsb_algo = algo;
+  parrsb_options options = parrsb_default_options;
+  switch (partitioner) {
+    case 1:
+      options.partitioner = 0;
+      break;
+    case 2:
+      options.partitioner = 1;
+      break;
+    default:
+      break;
+  }
+  options.verbose_level = *loglevel;
+  options.rsb_algo = algo;
+  options.local = 1;
 
   if (*loglevel > 2)
-    printPartStat(vl, nel, nv, cext);
+    print_part_stat(vl, nel, nv, cext);
 
   ierr = parrsb_part_mesh(part, seq, vl, xyz, nel, nv, options, comm.c);
   if (ierr != 0)
     goto err;
 
-  ierr = redistributeData(&nel, vl, el, part, seq, nv, *lelt, &comm);
+  ierr = redistribute_mesh(&nel, vl, el, part, seq, nv, *lelt, &comm);
   if (ierr != 0)
     goto err;
 
   if (*loglevel > 2)
-    printPartStat(vl, nel, nv, cext);
+    print_part_stat(vl, nel, nv, cext);
 
 #elif defined(PARMETIS)
+  int opt[3];
   int metis;
   metis = partitioner & 4;
 
@@ -395,19 +390,20 @@ void fpartMesh(long long *el, long long *vl, double *xyz, const int *lelt,
 
     ierr = parMETIS_partMesh(part,vl,nel,nv,opt,comm.c);
 
-    ierr = redistributeData(&nel,vl,el,part,NULL,nv,*lelt,&comm);
+    ierr = redistribute_mesh(&nel,vl,el,part,NULL,nv,*lelt,&comm);
     if (ierr != 0)
       goto err;
   }
 #endif
 
-  free(part);
-  free(seq);
+  free(part), free(seq);
 
-  *nell = nel;
-  *rtval = 0;
-  if (comm.id == 0) printf("\n");
+  *nell = nel, *rtval = 0;
+
+  if (comm.id == 0)
+    printf("\n");
   fflush(stdout);
+
   return;
 
 err:
@@ -425,5 +421,5 @@ void fprintPartStat(long long *vtx, int *nel, int *nv, int *comm)
   comm_ext c = 0;
 #endif
 
-  printPartStat(vtx, *nel, *nv, c);
+  print_part_stat(vtx, *nel, *nv, c);
 }

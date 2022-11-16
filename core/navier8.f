@@ -213,9 +213,18 @@ c      endif
       call chcopy(fname1,amgfile,lamgn)
       call chcopy(fname1(lamgn+1),char(0),1)
 
+      ! call parrsb_reorder_dofs
+      ierr = 0
+      call fparrsb_order_dofs(se_to_gcrs_reordered, ntot, se_to_gcrs,
+     $  nekcomm, ierr)
+      ierr = iglmax(ierr,1)
+      if (ierr.eq.1) then
+         call exitt
+      endif
+
       ierr = 0
       call fgslib_crs_setup(xxth(ifield),isolver,nekcomm,mp,ntot,
-     $     se_to_gcrs,nz,ia,ja,a, null_space, crs_param, 
+     $     se_to_gcrs_reordered,nz,ia,ja,a, null_space, crs_param,
      $     amgfile_c,ierr)
       ierr = iglmax(ierr,1)
       if (ifneknek) ierr = iglmax_ms(ierr,1)

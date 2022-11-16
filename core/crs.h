@@ -1,7 +1,9 @@
 #ifndef CRS_H
 #define CRS_H
 
+#if defined(PARRSB)
 #include "coarse.h"
+#endif
 
 #if !defined(COMM_H)
 #warning "crs.h" requires "comm.h"
