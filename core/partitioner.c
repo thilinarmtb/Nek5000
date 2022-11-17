@@ -362,7 +362,7 @@ void fpartmesh(long long *el, long long *vl, double *xyz, const int *lelt,
   }
   options.verbose_level = *loglevel;
   options.rsb_algo = algo;
-  options.local = 1;
+  // options.local = 1;
 
   if (*loglevel > 2)
     print_part_stat(vl, nel, nv, cext);

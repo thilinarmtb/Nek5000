@@ -172,8 +172,19 @@ c     ifield=1			!c? avo: set in set_overlap through 'TSTEP'?
          enddo
       endif
 
-c     Set global index of dirichlet nodes to zero; xxt will ignore them
+c     Call parrsb_reorder_dofs
+c     ierr = 0
+c     call fparrsb_order_dofs(se_to_gcrs_reordered, ntot, ncr,
+c    $  se_to_gcrs, nekcomm, ierr)
+c     ierr = iglmax(ierr,1)
+c     if (ierr.eq.1) then
+c        call exitt
+c     endif
+c     do i = 1, ntot
+c       se_to_gcrs(i, 1) = se_to_gcrs_reordered(i, 1)
+c     enddo
 
+c     Set global index of dirichlet nodes to zero; xxt will ignore them
       call fgslib_gs_setup(gs_handle,se_to_gcrs,ntot,nekcomm,mp)
       call fgslib_gs_op   (gs_handle,mask,1,2,0)  !  "*"
       call fgslib_gs_op   (gs_handle,cmlt,1,1,0)  !  "+"
@@ -213,18 +224,9 @@ c      endif
       call chcopy(fname1,amgfile,lamgn)
       call chcopy(fname1(lamgn+1),char(0),1)
 
-      ! call parrsb_reorder_dofs
-      ierr = 0
-      call fparrsb_order_dofs(se_to_gcrs_reordered, ntot, se_to_gcrs,
-     $  nekcomm, ierr)
-      ierr = iglmax(ierr,1)
-      if (ierr.eq.1) then
-         call exitt
-      endif
-
       ierr = 0
       call fgslib_crs_setup(xxth(ifield),isolver,nekcomm,mp,ntot,
-     $     se_to_gcrs_reordered,nz,ia,ja,a, null_space, crs_param,
+     $     se_to_gcrs,nz,ia,ja,a, null_space, crs_param,
      $     amgfile_c,ierr)
       ierr = iglmax(ierr,1)
       if (ifneknek) ierr = iglmax_ms(ierr,1)
