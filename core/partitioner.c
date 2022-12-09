@@ -513,7 +513,6 @@ void fpartMesh(long long *el, long long *vl, double *xyz, const int *lelt,
   // RSB-Lanczos specific
   //   rsb_lanczos_max_restarts: Maximum restarts in Lanczos (Default: 50)
   parrsb_options options = parrsb_default_options;
-  options.verbose_level = *loglevel;
   if (partitioner & 1)
     options.partitioner = 0;
   else if (partitioner & 2)
@@ -522,7 +521,7 @@ void fpartMesh(long long *el, long long *vl, double *xyz, const int *lelt,
   if (partitioner & 1)
     options.rsb_algo = algo;
 
-  if(*loglevel >2)
+  if (*loglevel > 2)
     printPartStat(vl, nel, nv, cext);
 
   ierr = parrsb_part_mesh(part, seq, vl, xyz, nel, nv, options, comm.c);
@@ -533,7 +532,7 @@ void fpartMesh(long long *el, long long *vl, double *xyz, const int *lelt,
   if (ierr != 0)
     goto err;
 
-  if (*loglevel >2)
+  if (*loglevel > 2)
     printPartStat(vl, nel, nv, cext);
 
 #elif defined(PARMETIS)
