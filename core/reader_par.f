@@ -13,6 +13,7 @@ c
 
       call setDefaultParam
 
+      ierr = 0
       if(nid.eq.0) call par_read(ierr)
       call bcast(ierr,isize)
       if(ierr .ne. 0) call exitt
@@ -147,7 +148,7 @@ C
 
       meshPartitioner = 3 ! HYBRID (RSB+RCB)
       connectivityTol = 0.2
-      ifnewre2rdr = .false.
+      ifnewre2rdr = .true.
 
       ifprojfld(0) = .false. 
       ifprojfld(1) = .false. 
@@ -840,7 +841,7 @@ c set connectivity tolerance
 
 c enable new re2 reader
       call finiparser_getBool(i_out,'mesh:newre2reader',ifnd)
-      if(ifnd .eq. 1 .and. i_out .eq. 1) ifnewre2rdr = .true.
+      if(ifnd.eq.1 .and. i_out.eq.0) ifnewre2rdr = .false.
 
 100   if(ierr.eq.0) call finiparser_dump()
       return

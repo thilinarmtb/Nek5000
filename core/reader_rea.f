@@ -1,4 +1,103 @@
 c-----------------------------------------------------------------------
+      subroutine readat_rea
+      include 'SIZE'
+      include 'TOTAL'
+      include 'CTIMER'
+      include 'RESTART'
+
+      logical ifbswap,ifre2
+      character*132 string
+      integer idum(3*numsts+3)
+
+      etime0 = dnekclock_sync()
+
+      ierr = 0
+      if (nid.eq.0) then
+        write(6,'(A,A)') ' Reading ', reafle
+        open (unit=9,file=reafle,status='old', iostat=ierr)
+      endif
+
+      call bcast(ierr,isize)
+      if (ierr .gt. 0) call exitti('Cannot open rea file!$',1)
+
+C     Read parameters and logical flags
+      call rdparam
+
+C     Read Mesh Info 
+      if(nid.eq.0) then
+        read(9,*) ! xfac,yfac,xzero,yzero
+        read(9,*) ! dummy
+        read(9,*) nelgs,ldimr,nelgv
+        nelgt = abs(nelgs)
+      endif
+      call bcast(ldimr,ISIZE)
+      call bcast(nelgs,ISIZE)
+      call bcast(nelgv,ISIZE)
+      call bcast(nelgt,ISIZE)
+
+      ifre2 = .false.
+      if (nelgs.lt.0) ifre2 = .true.
+
+      call usrdat0
+
+      if (nelgt.gt.350000 .and. .not.ifre2)
+     $   call exitti('Problem size requires .re2!$',1)
+
+      ! rank0 will open and read
+      if (ifre2) call read_re2_hdr(ifbswap,.true.)
+      ! make certain sufficient array sizes
+      call chk_nel
+
+      call mapelpr
+
+      if (ifre2) then
+        call read_re2_data(ifbswap,.true.,.true.,.true.)
+      else
+        maxrd = 32               ! max # procs to read at once
+        mread = (np-1)/maxrd+1   ! mod param
+        iread = 0                ! mod param
+        x     = 0
+        do i=0,np-1,maxrd
+           call nekgsync()
+           if (mod(nid,mread).eq.iread) then
+              if (nid.ne.0) then
+                open(UNIT=9,FILE=REAFLE,STATUS='OLD')
+                call cscan(string,'MESH DATA',9)
+                read(9,*) string
+              endif
+              call rdmesh
+              call rdcurve !  Curved side data
+              call rdbdry  !  Boundary Conditions
+              if (nid.ne.0) close(unit=9)
+           endif
+           iread = iread + 1
+        enddo
+      endif
+
+C     Read Restart options / Initial Conditions / Drive Force
+      CALL RDICDF
+C     Read materials property data
+      CALL RDMATP
+C     Read history data
+      CALL RDHIST
+C     Read output specs
+      CALL RDOUT
+C     Read objects
+      CALL RDOBJ
+
+      call nekgsync()
+
+C     End of input data, close read file.
+      if(nid.eq.0) then
+        close(unit=9)
+        call echopar
+        write(6,'(A,g13.5,A,/)')  ' done :: read .rea file ',
+     $                             dnekclock()-etime0,' sec'
+      endif
+
+      return
+      end
+c-----------------------------------------------------------------------
       subroutine rdparam
 C
 C     .Read in parameters supplied by preprocessor and
@@ -1165,4 +1264,3 @@ C
  
       return
       END
-

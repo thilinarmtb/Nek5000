@@ -18,130 +18,19 @@ c     Read data from preprocessor input files (rea,par,re2,co2,ma2,etc.)
 
       get_vert_called = 0
 
-      if (ifnewre2rdr) then
-        if (parfound) then
-          !--> May be this section should go in readat_big_v2
-          call setDefaultParam
-
-          if (nid.eq.0) call par_read(ierr)
-          call bcast(ierr, isize)
-          if (ierr.ne.0) call exitt
-          call bcastParam
-
-          call usrdat0
-          ! --<
-
-          call readat_big_v2 ! New reading strategy
+      if (parfound) then
+        if(nio.eq.0) write(6,'(a,a)') ' Reading ', parfle
+        if (ifnewre2rdr) then
+          call readat_big_v2
         else
-          call exitti('Cannot open .par file!$', 1)
+          call readat_par
         endif
       else
-        if (parfound) then
-          if(nio.eq.0) write(6,'(a,a)') ' Reading ', parfle
-          call readat_par
-        else
-          if(nio.eq.0) write(6,'(a,a)') ' Reading .rea file '
-          call readat_rea
-        endif
+        if(nio.eq.0) write(6,'(a,a)') ' Reading .rea file '
+        call readat_rea
       endif
 
       call set_boundary_ids
-
-      return
-      end
-c-----------------------------------------------------------------------
-      subroutine readat_rea
-      include 'SIZE'
-      include 'TOTAL'
-      include 'CTIMER'
-      include 'RESTART'
-
-      logical ifbswap,ifre2
-      character*132 string
-      integer idum(3*numsts+3)
-
-      etime0 = dnekclock_sync()
-
-      ierr = 0
-      if(nid.eq.0) then
-        write(6,'(A,A)') ' Reading ', reafle
-        open (unit=9,file=reafle,status='old', iostat=ierr)
-      endif
-
-      call bcast(ierr,isize)
-      if (ierr .gt. 0) call exitti('Cannot open rea file!$',1)
-
-C     Read parameters and logical flags
-      call rdparam
-
-C     Read Mesh Info 
-      if(nid.eq.0) then
-        read(9,*)    ! xfac,yfac,xzero,yzero
-        read(9,*)    ! dummy
-        read(9,*)  nelgs,ldimr,nelgv
-        nelgt = abs(nelgs)
-      endif
-      call bcast(ldimr,ISIZE)
-      call bcast(nelgs,ISIZE)
-      call bcast(nelgv,ISIZE)
-      call bcast(nelgt,ISIZE)
-      ifre2 = .false.
-      if (nelgs.lt.0) ifre2 = .true.
-
-      call usrdat0
-
-      if (nelgt.gt.350000 .and. .not.ifre2) 
-     $   call exitti('Problem size requires .re2!$',1)
-
-      if (ifre2) call read_re2_hdr(ifbswap, .true.) ! rank0 will open and read
-      call chk_nel  ! make certain sufficient array sizes
-
-      call mapelpr
-
-      if (ifre2) then
-        call read_re2_data(ifbswap, .true., .true., .true.)
-      else
-        maxrd = 32               ! max # procs to read at once
-        mread = (np-1)/maxrd+1   ! mod param
-        iread = 0                ! mod param
-        x     = 0
-        do i=0,np-1,maxrd
-           call nekgsync()
-           if (mod(nid,mread).eq.iread) then
-              if (nid.ne.0) then
-                open(UNIT=9,FILE=REAFLE,STATUS='OLD')
-                call cscan(string,'MESH DATA',9)
-                read(9,*) string
-              endif 
-              call rdmesh
-              call rdcurve !  Curved side data
-              call rdbdry  !  Boundary Conditions
-              if (nid.ne.0) close(unit=9)
-           endif
-           iread = iread + 1
-        enddo
-      endif
-
-C     Read Restart options / Initial Conditions / Drive Force
-      CALL RDICDF
-C     Read materials property data
-      CALL RDMATP
-C     Read history data
-      CALL RDHIST
-C     Read output specs
-      CALL RDOUT
-C     Read objects
-      CALL RDOBJ
-
-      call nekgsync()
-
-C     End of input data, close read file.
-      if(nid.eq.0) then
-        close(unit=9)
-        call echopar
-        write(6,'(A,g13.5,A,/)')  ' done :: read .rea file ',
-     $                             dnekclock()-etime0,' sec'
-      endif
 
       return
       end
@@ -1806,11 +1695,19 @@ c-----------------------------------------------------------------------
       common /ctmp1/ vi
 
       logical ifbswap
-      integer loc_to_glo_nid(lelt), lglelo(lelt), nelto, nvi, ierr
+      integer loc_to_glo_nid(lelt),lglelo(lelt),nelto,nvi,ierr
       integer ibuf(2)
-      real etimei, etimee, dur0, dur1
+      real etimei,etimee,dur0,dur1
+
+      call setDefaultParam
 
       ierr = 0
+      if (nid.eq.0) call par_read(ierr)
+      call bcast(ierr, isize)
+      if (ierr.ne.0) call exitt
+      call bcastParam
+
+      call usrdat0
 
       ! Read the header to get nelgt, nelgv, ndim and then calculate
       ! nelt.
