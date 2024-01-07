@@ -477,7 +477,7 @@ if [ $HYPRE -ne 0 ]; then
 fi
 
 if [ $PARMETIS -ne 0 ]; then
-  sed -e "s:^PARRSB_IFLAGS[ ]*=.*:PARRSB_IFLAGS\:=-I${METIS_INC}:" \
+  sed -e "s:^PARMETIS_IFLAGS[ ]*=.*:PARMETIS_IFLAGS\:=-I${METIS_INC}:" \
       -e "s:^USR_LFLAGS[ ]*=.*:USR_LFLAGS=$USR_LFLAGS:" \
       .makefile > .makefile.tmp
 
