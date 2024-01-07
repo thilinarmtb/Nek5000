@@ -29,10 +29,11 @@ HYPRE_IFLAGS=
 GSLIB_IFLAGS=
 PARMETIS_IFLAGS=
 PARRSB_IFLAGS=
+ZOLTAN_IFLAGS=
 
 ################################################################################
 
-PART_IFLAGS = $(PARMETIS_IFLAGS) $(PARRSB_IFLAGS)
+PART_IFLAGS = $(PARMETIS_IFLAGS) $(PARRSB_IFLAGS) $(ZOLTAN_IFLAGS)
 PPS_F = $(patsubst %,$(PPPO)-D%,$(PPS))
 PPS_C = $(patsubst %,-D%,$(PPS))
 
