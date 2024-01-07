@@ -298,7 +298,6 @@ int redistribute_data(int *nel_, long long *vl, long long *el, int *part,
 }
 
 #define fpartmesh FORTRAN_UNPREFIXED(fpartmesh, FPARTMESH)
-
 void fpartmesh(int *nell, long long *el, long long *vl, double *xyz,
                const int *const lelm, const int *const nve,
                const int *const fcomm, const int *const fpartitioner,
@@ -307,8 +306,6 @@ void fpartmesh(int *nell, long long *el, long long *vl, double *xyz,
 
   int nel, nv, lelt, partitioner, algo;
   int e, n;
-  int count, ierr, ibuf;
-  int *part;
   int opt[3];
 
   lelt = *lelm;
@@ -324,18 +321,33 @@ void fpartmesh(int *nell, long long *el, long long *vl, double *xyz,
 #endif
   comm_init(&comm, cext);
 
-  ierr = 1;
-  part = (int *)malloc(lelt * sizeof(int));
+  int ierr = 1;
+  int *part = (int *)malloc(lelt * sizeof(int));
+
+  // RSB or RCB:
+  if (partitioner == 0 || partitioner == 1) {
 #if defined(PARRSB)
-  parrsb_options options = parrsb_default_options;
-  options.partitioner = partitioner;
-  if (partitioner == 0) // RSB
-    options.rsb_algo = algo;
+    parrsb_options options = parrsb_default_options;
+    options.partitioner = partitioner;
+    if (partitioner == 0) // RSB
+      options.rsb_algo = algo;
 
-  if (*loglevel > 2)
-    print_part_stat(vl, nel, nv, cext);
+    if (*loglevel > 2)
+      print_part_stat(vl, nel, nv, cext);
 
-  ierr = parrsb_part_mesh(part, vl, xyz, NULL, nel, nv, &options, comm.c);
+    ierr = parrsb_part_mesh(part, vl, xyz, NULL, nel, nv, &options, comm.c);
+#endif
+  }
+
+  if (partitioner == 8) {
+#if defined(PARMETIS)
+    opt[0] = 1;
+    opt[1] = 0; /* verbosity */
+    opt[2] = comm.np;
+
+    ierr = parMETIS_partMesh(part, vl, nel, nv, opt, comm.c);
+#endif
+  }
   if (ierr != 0)
     goto err;
 
@@ -346,18 +358,6 @@ void fpartmesh(int *nell, long long *el, long long *vl, double *xyz,
   if (*loglevel > 2)
     print_part_stat(vl, nel, nv, cext);
 
-#elif defined(PARMETIS)
-  if (partitioner == 8) {
-    opt[0] = 1;
-    opt[1] = 0; /* verbosity */
-    opt[2] = comm.np;
-
-    ierr = parMETIS_partMesh(part, vl, nel, nv, opt, comm.c);
-    ierr = redistribute_data(&nel, vl, el, part, NULL, nv, lelt, &comm);
-    if (ierr != 0)
-      goto err;
-  }
-#endif
   free(part);
   comm_free(&comm);
 
