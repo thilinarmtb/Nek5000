@@ -553,8 +553,14 @@ void print_part_stat(long long *vtx, int nel, int nv, comm_ext ce) {
   comm_allreduce(&comm, gs_int, gs_min, &nssMin, 1, &b);
   comm_allreduce(&comm, gs_long_long, gs_add, &nssSum, 1, &b_long_long);
 
-  nsSum = nsSum / Nmsg;
+  if (Nmsg > 0)
+    nsSum = nsSum / Nmsg;
+  else
+    nsSum = 0;
   comm_allreduce(&comm, gs_int, gs_add, &nsSum, 1, &b);
+
+  sint npp = (Nmsg > 0);
+  comm_allreduce(&comm, gs_int, gs_add, &npp, 1, &b);
 
   nelMax = nel;
   nelMin = nel;
@@ -562,14 +568,13 @@ void print_part_stat(long long *vtx, int nel, int nv, comm_ext ce) {
   comm_allreduce(&comm, gs_int, gs_min, &nelMin, 1, &b);
 
   if (id == 0) {
-    printf(" nElements   max/min/bal: %d %d %.2f\n", nelMax, nelMin,
-           (double)nelMax / nelMin);
+    printf(" nElements   max/min: %d %d\n", nelMax, nelMin);
     printf(" nMessages   max/min/avg: %d %d %.2f\n", ncMax, ncMin,
-           (double)ncSum / np);
+           (double)ncSum / npp);
     printf(" msgSize     max/min/avg: %d %d %.2f\n", nsMax, nsMin,
-           (double)nsSum / np);
+           (double)nsSum / npp);
     printf(" msgSizeSum  max/min/avg: %d %d %.2f\n", nssMax, nssMin,
-           (double)nssSum / np);
+           (double)nssSum / npp);
     fflush(stdout);
   }
 
