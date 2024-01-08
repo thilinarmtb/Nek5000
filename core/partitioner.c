@@ -68,10 +68,22 @@ int parMETIS_partMesh(int *part, long long *vl, int nel, int nv, int *opt,
     goto err;
   }
 
+  sint work[2], nel_min = nel, nel_max = nel;
+  struct comm gsc;
+  comm_init(&gsc, ce);
+  comm_allreduce(&gsc, gs_int, gs_min, &nel_min, 1, work);
+  comm_allreduce(&gsc, gs_int, gs_max, &nel_max, 1, work);
+  if (gsc.id == 0) {
+    fprintf(stderr, "parMETIS 00: nel_min = %d, nel_max = %d\n", nel_min,
+            nel_max);
+    fflush(stderr);
+  }
+
   color = MPI_UNDEFINED;
   if (nel > 0)
     color = 1;
-  MPI_Comm_split(ce, color, 0, &comms);
+  MPI_Comm_split(ce, color, gsc.id, &comms);
+  comm_free(&gsc);
   if (color == MPI_UNDEFINED)
     goto end;
 
