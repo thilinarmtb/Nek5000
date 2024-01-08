@@ -447,6 +447,11 @@ int Zoltan_partMesh(int *part, long long *vl, int nel, int nv, MPI_Comm comm) {
   Zoltan_Set_Num_Edges_Multi_Fn(zz, get_edge_size_list, graph);
   Zoltan_Set_Edge_List_Multi_Fn(zz, get_edge_list, graph);
 
+  if (rank == 0) {
+    printf("Running Zoltan ... ");
+    fflush(stdout);
+  }
+
   int changes, num_gid_entries, num_lid_entries, num_import, num_export;
   ZOLTAN_ID_PTR import_global_ids, import_local_ids, export_global_ids,
       export_local_ids;
@@ -465,6 +470,11 @@ int Zoltan_partMesh(int *part, long long *vl, int nel, int nv, MPI_Comm comm) {
       fflush(stderr);
     }
     exit(EXIT_FAILURE);
+  }
+
+  if (rank == 0) {
+    printf("done.\n");
+    fflush(stdout);
   }
 
   for (uint i = 0; i < graph->num_vertices; i++)
