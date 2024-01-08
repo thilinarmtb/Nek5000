@@ -455,7 +455,7 @@ int Zoltan_partMesh(int *part, long long *vl, int nel, int nv, MPI_Comm comm) {
                       &export_to_part);
   Zoltan_Destroy(&zz);
 
-  graph_destroy(graph);
+  graph_destroy(&graph);
 
   return 0;
 err:
