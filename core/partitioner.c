@@ -366,7 +366,7 @@ static void get_edge_size_list(void *data, int size_gid, int size_lid,
   graph_t *graph = (graph_t *)data;
   *ierr = ZOLTAN_OK;
 
-  if (size_gid != 1 || size_lid != 1) {
+  if (size_gid != 1 || size_lid != 1 || num_obj != graph->num_vertices) {
     *ierr = ZOLTAN_FATAL;
     return;
   }
@@ -399,9 +399,10 @@ static void get_edge_list(void *data, int size_gid, int size_lid, int num_obj,
       return;
     }
 
+    int offset = graph->neighbor_index[id];
     for (int j = 0; j < n; j++) {
-      nbr_global_id[j] = graph->neighbor_ids[graph->neighbor_index[id] + j];
-      nbr_procs[j] = graph->neighbor_procs[graph->neighbor_index[id] + j];
+      nbr_global_id[offset + j] = graph->neighbor_ids[offset + j];
+      nbr_procs[offset + j] = graph->neighbor_procs[offset + j];
     }
   }
 }
