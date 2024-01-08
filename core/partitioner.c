@@ -57,6 +57,13 @@ int parMETIS_partMesh(int *part, long long *vl, int nel, int nv, int *opt,
   elmwgt = NULL; /* no weights */
   ncommonnodes = 2;
 
+  struct comm gsc;
+  comm_init(&gsc, ce);
+  if (gsc.id == 0) {
+    fprintf(stderr, "parMETIS 00: Inside parMETIS_partMesh\n");
+    fflush(stderr);
+  }
+
   part_ = (idx_t *)malloc(nel * sizeof(idx_t));
 
   if (sizeof(idx_t) != sizeof(long long)) {
@@ -68,13 +75,16 @@ int parMETIS_partMesh(int *part, long long *vl, int nel, int nv, int *opt,
     goto err;
   }
 
+  if (gsc.id == 0) {
+    fprintf(stderr, "parMETIS 05: Initial checks done\n");
+    fflush(stderr);
+  }
+
   sint work[2], nel_min = nel, nel_max = nel;
-  struct comm gsc;
-  comm_init(&gsc, ce);
   comm_allreduce(&gsc, gs_int, gs_min, &nel_min, 1, work);
   comm_allreduce(&gsc, gs_int, gs_max, &nel_max, 1, work);
   if (gsc.id == 0) {
-    fprintf(stderr, "parMETIS 00: nel_min = %d, nel_max = %d\n", nel_min,
+    fprintf(stderr, "parMETIS 10: nel_min = %d, nel_max = %d\n", nel_min,
             nel_max);
     fflush(stderr);
   }
@@ -663,6 +673,10 @@ void fpartmesh(int *nell, long long *el, long long *vl, double *xyz,
 
   // parMETIS:
   if (partitioner == 8) {
+    if (comm.id == 0) {
+      fprintf(stderr, "Calling parMETIS\n");
+      fflush(stderr);
+    }
 #if defined(PARMETIS)
     int opt[3];
     opt[0] = 1;
