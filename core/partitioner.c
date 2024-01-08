@@ -617,7 +617,6 @@ void fpartmesh(int *nell, long long *el, long long *vl, double *xyz,
 
   int nel, nv, lelt, partitioner, algo;
   int e, n;
-  int opt[3];
 
   lelt = *lelm;
   nel = *nell;
@@ -635,6 +634,9 @@ void fpartmesh(int *nell, long long *el, long long *vl, double *xyz,
   int ierr = 1;
   int *part = (int *)malloc(lelt * sizeof(int));
 
+  if (*loglevel > 2)
+    print_part_stat(vl, nel, nv, cext);
+
   // RSB or RCB:
   if (partitioner == 0 || partitioner == 1) {
 #if defined(PARRSB)
@@ -643,15 +645,14 @@ void fpartmesh(int *nell, long long *el, long long *vl, double *xyz,
     if (partitioner == 0) // RSB
       options.rsb_algo = algo;
 
-    if (*loglevel > 2)
-      print_part_stat(vl, nel, nv, cext);
-
     ierr = parrsb_part_mesh(part, vl, xyz, NULL, nel, nv, &options, comm.c);
 #endif
   }
 
+  // parMETIS:
   if (partitioner == 8) {
 #if defined(PARMETIS)
+    int opt[3];
     opt[0] = 1;
     opt[1] = 0; /* verbosity */
     opt[2] = comm.np;
@@ -659,6 +660,14 @@ void fpartmesh(int *nell, long long *el, long long *vl, double *xyz,
     ierr = parMETIS_partMesh(part, vl, nel, nv, opt, comm.c);
 #endif
   }
+
+  // Zoltan:
+  if (partitioner == 16) {
+#if defined(ZOLTAN)
+    ierr = Zoltan_partMesh(part, vl, nel, nv, comm.c);
+#endif
+  }
+
   if (ierr != 0)
     goto err;
 
