@@ -4,7 +4,7 @@ set -e
 VER=0.9.1
 
 if [ "$1" == "clean" ]; then
-  rm -rf parRSB/build lib include 2>/dev/null
+  rm -rf v$VER.tar.gz parRSB/build lib include 2>/dev/null
   exit 0
 fi
 

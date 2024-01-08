@@ -4,7 +4,7 @@ set -e
 VER=3.901
 
 if [ "$1" == "clean" ]; then
-  rm -rf Zoltan lib include 2>/dev/null 
+  rm -rf v$VER.tar.gz Zoltan lib include 2>/dev/null
   exit 0
 fi
 

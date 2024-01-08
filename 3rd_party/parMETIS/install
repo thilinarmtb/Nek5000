@@ -4,7 +4,7 @@ set -e
 VER=4.0.3
 
 if [ "$1" == "clean" ]; then
-  rm -rf parMETIS bin lib include 2>/dev/null 
+  rm -rf v$VER.tar.gz parMETIS bin lib include 2>/dev/null
   exit 0
 fi
 
@@ -31,7 +31,7 @@ patch Makefile < ../p_makefile
 make config cc=`which $CC` prefix=`pwd`/..
 set +x
 mkdir -p ../include
-make install 
+make install
 find . -name "libmetis.a" -exec cp {} ../lib \;
 cp ./metis/include/metis.h ../include
 cp ./libparmetis/defs.h ../include
