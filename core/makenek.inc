@@ -340,15 +340,15 @@ do
      USR_LFLAGS+=" -L${SOURCE_ROOT_PARRSB}/lib -lparRSB"
      PARRSB_INC="${SOURCE_ROOT_PARRSB}/include"
    fi
-   if [ "$i" == "PARMETIS" ]; then
-     PARMETIS=1
-     USR_LFLAGS+=" -L$SOURCE_ROOT_PARMETIS/lib -lparmetis -lmetis"
-     METIS_INC="$SOURCE_ROOT_PARMETIS/include"
-   fi
    if [ "$i" == "ZOLTAN" ]; then
      ZOLTAN=1
      USR_LFLAGS+=" -L${SOURCE_ROOT_ZOLTAN}/lib -lzoltan"
      ZOLTAN_INC="${SOURCE_ROOT_ZOLTAN}/include"
+   fi
+   if [ "$i" == "PARMETIS" ]; then
+     PARMETIS=1
+     USR_LFLAGS+=" -L$SOURCE_ROOT_PARMETIS/lib -lparmetis -lmetis"
+     METIS_INC="$SOURCE_ROOT_PARMETIS/include"
    fi
    if [ "$i" == "CVODE" ]; then 
      CVODE=1

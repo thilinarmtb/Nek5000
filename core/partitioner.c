@@ -204,7 +204,7 @@ static graph_t *graph_create(long long *vl, int nelt, int nv, struct comm *c) {
     for (uint i = 0; i < nelt; i++) {
       for (uint j = 0; j < nv; j++) {
         vertex.vid = vl[i * nv + j];
-        vertex.eid = i + start;
+        vertex.eid = i + start + 1;
         vertex.dest = vertex.vid % c->np;
         array_cat(struct vertex_t, &vertices, &vertex, 1);
       }
@@ -287,8 +287,8 @@ static graph_t *graph_create(long long *vl, int nelt, int nv, struct comm *c) {
       nbr.eid = pn[i].eid;
       nbr.nid = pn[i].vid;
       nbr.np = pn[i].np;
-      array_cat(struct neighbor_t, &compressed, &nbr, 1);
-
+      if (nbr.eid != nbr.nid)
+        array_cat(struct neighbor_t, &compressed, &nbr, 1);
       i = e;
     }
   }
@@ -300,7 +300,7 @@ static graph_t *graph_create(long long *vl, int nelt, int nv, struct comm *c) {
 
   graph->vertex_ids = tcalloc(ZOLTAN_ID_TYPE, nelt);
   for (uint i = 0; i < nelt; i++)
-    graph->vertex_ids[i] = i + start;
+    graph->vertex_ids[i] = i + start + 1;
 
   graph->neighbor_index = tcalloc(int, nelt + 1);
   {
