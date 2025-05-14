@@ -353,8 +353,7 @@ done
 
 if [ $VENDOR_BLAS -ne 1 ]; then
   USR_LFLAGS+=" -L$SOURCE_ROOT_BLAS -lblasLapack"
-  PARRSB_OPT+=" BLASDIR=${SOURCE_ROOT_BLAS}"
-  PARRSB_OPT+=" BLASFLAGS=-lblasLapack"
+  PARRSB_OPT+=" BLASFLAGS=\"-L${SOURCE_ROOT_BLAS} -lblasLapack\""
 fi
 
 # gslib build options

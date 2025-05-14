@@ -1,7 +1,7 @@
 #include "gslib.h"
 
 #if defined(PARRSB)
-#include "parRSB.h"
+#include "parrsb.h"
 #endif
 
 #include "name.h"
@@ -329,15 +329,15 @@ void fpartmesh(int *nell, long long *el, long long *vl, double *xyz,
   ierr = 1;
   part = (int *)malloc(lelt * sizeof(int));
 #if defined(PARRSB)
-  parrsb_options options = parrsb_default_options;
-  options.partitioner = partitioner;
-  if (partitioner == 0) // RSB
-    options.rsb_algo = algo;
+  parrsb_options_t options;
+  parrsb_options_get_default(&options);
+  parrsb_options_set_partitioner(options, partitioner);
+  parrsb_options_set_rsb_algo(options, algo);
 
   if (*loglevel > 2)
     print_part_stat(vl, nel, nv, cext);
 
-  ierr = parrsb_part_mesh(part, vl, xyz, NULL, nel, nv, &options, comm.c);
+  ierr = parrsb_part_mesh(part, vl, xyz, NULL, nel, nv, options, comm.c);
   if (ierr != 0)
     goto err;
 
@@ -368,44 +368,11 @@ void fpartmesh(int *nell, long long *el, long long *vl, double *xyz,
   return;
 
 err:
-  fflush(stdout);
-  *rtval = 1;
-}
-
-#define fpartmesh_greedy FORTRAN_UNPREFIXED(fpartmesh_greedy, FPARTMESH_GRREDY)
-
-void fpartmesh_greedy(int *const nel2, long long *const el2,
-                      long long *const vl2, const int *const nel1,
-                      const long long *const vl1, const int *const lelm_,
-                      const int *const nv, const int *const fcomm,
-                      int *const rtval) {
 #if defined(PARRSB)
-  const int lelm = *lelm_;
-
-  struct comm comm;
-#if defined(MPI)
-  comm_ext cext = MPI_Comm_f2c(*fcomm);
-#else
-  comm_ext cext = 0;
+  parrsb_options_free(&options);
 #endif
-  comm_init(&comm, cext);
-
-  int *const part = (int *)malloc(lelm * sizeof(int));
-  parrsb_part_solid(part, vl2, *nel2, vl1, *nel1, *nv, comm.c);
-
-  int ierr = redistribute_data(nel2, vl2, el2, part, *nv, lelm, &comm);
-  if (ierr != 0)
-    goto err;
-  *rtval = 0;
-
-  free(part);
-  comm_free(&comm);
-  return;
-
-err:
   fflush(stdout);
   *rtval = 1;
-#endif
 }
 
 #define fprintpartstat FORTRAN_UNPREFIXED(printpartstat, PRINTPARTSTAT)
