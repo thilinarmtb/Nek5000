@@ -15,7 +15,7 @@ set -a
 #LD="$FC"
 
 # config options (set to "?" to get a list)
-#PPLIST="PARRSB DPROCMAP HYPRE" 
+PPLIST="PARRSB DPROCMAP"
 
 #-------------------------------------------------------------------------------
 # WHAT FOLLOWS ARE OPTIONAL SETTINGS
